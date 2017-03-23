@@ -13,12 +13,8 @@
 
   // Invokes the pailer for the specified host and path using the
   // specified window_title.
-  function pailer(host, path, window_title, agent_id) {
-    if (agent_id) {
-      var url = '/slave/' + agent_id + '/files/read?path=' + path;
-    } else {
-      var url = '/mesos/files/read?path=' + path;
-    }
+  function pailer(host, path, window_title) {
+    var url = host + 'files/read?path=' + path;
     // The randomized `storageKey` is removed from `localStorage` once the
     // pailer window loads the URL into its `sessionStorage`, therefore
     // the probability of collisions is low and we do not use a uuid.
@@ -415,7 +411,7 @@
       // the leading master automatically. This would cause a CORS error if we
       // use XMLHttpRequest here. To avoid the CORS error, we use JSONP as a
       // workaround. Please refer to MESOS-5911 for further details.
-      $http.jsonp(leadingMasterURL('/mesos/master/state?jsonp=JSON_CALLBACK'))
+      $http.jsonp('master/state?jsonp=JSON_CALLBACK')
         .success(function(response) {
           if (updateState($scope, $timeout, response)) {
             $scope.delay = updateInterval(_.size($scope.agents));
@@ -430,7 +426,7 @@
     };
 
     var pollMetrics = function() {
-      $http.jsonp(leadingMasterURL('/mesos/metrics/snapshot?jsonp=JSON_CALLBACK'))
+      $http.jsonp('metrics/snapshot?jsonp=JSON_CALLBACK')
         .success(function(response) {
           if (updateMetrics($scope, $timeout, response)) {
             $scope.delay = updateInterval(_.size($scope.agents));
@@ -463,10 +459,9 @@
         ).open();
       } else {
         pailer(
-            $scope.$location.host() + ':' + $scope.$location.port(),
+            '/mesos/',
             '/master/log',
-            'Mesos Master',
-            $scope.agent_id);
+            'Mesos Master');
       }
     };
   });
@@ -478,7 +473,7 @@
   mesosApp.controller('MaintenanceCtrl', function($scope, $http) {
     // TODO(haosdent): Send requests to the leading master directly
     // once `leadingMasterURL` is public.
-    $http.jsonp('/mesos/master/maintenance/schedule?jsonp=JSON_CALLBACK')
+    $http.jsonp('master/maintenance/schedule?jsonp=JSON_CALLBACK')
       .success(function(response) {
         $scope.maintenance = response;
       })
@@ -530,9 +525,8 @@
       }
 
       var pid = $scope.agents[$routeParams.agent_id].pid;
-      var hostname = $scope.agents[$routeParams.agent_id].hostname;
       var id = pid.substring(0, pid.indexOf('@'));
-      var host = hostname + ":" + pid.substring(pid.lastIndexOf(':') + 1);
+      var host = '/agent/' + $routeParams.agent_id + '/';
 
       $scope.log = function($event) {
         if (!$scope.state.external_log_file && !$scope.state.log_dir) {
@@ -542,7 +536,7 @@
             [{label: 'Continue'}]
           ).open();
         } else {
-          pailer(host, '/slave/log', 'Mesos Agent', $scope.agent_id);
+          pailer(host, '/slave/log', 'Mesos Agent');
         }
       };
 
@@ -551,7 +545,7 @@
         $top.start(host, id, $scope);
       }
 
-      $http.jsonp('/slave/' + $scope.agent_id + '/state?jsonp=JSON_CALLBACK')
+      $http.jsonp(host + id + '/state?jsonp=JSON_CALLBACK')
         .success(function (response) {
           $scope.state = response;
 
@@ -636,16 +630,15 @@
       }
 
       var pid = $scope.agents[$routeParams.agent_id].pid;
-      var hostname = $scope.agents[$routeParams.agent_id].hostname;
       var id = pid.substring(0, pid.indexOf('@'));
-      var host = hostname + ":" + pid.substring(pid.lastIndexOf(':') + 1);
+      var host = '/agent/' + $routeParams.agent_id + '/';
 
       // Set up polling for the monitor if this is the first update.
       if (!$top.started()) {
         $top.start(host, id, $scope);
       }
 
-      $http.jsonp('/slave/' + $scope.agent_id + '/state?jsonp=JSON_CALLBACK')
+      $http.jsonp(host + id + '/state?jsonp=JSON_CALLBACK')
         .success(function (response) {
           $scope.state = response;
 
@@ -713,9 +706,8 @@
       }
 
       var pid = $scope.agents[$routeParams.agent_id].pid;
-      var hostname = $scope.agents[$routeParams.agent_id].hostname;
       var id = pid.substring(0, pid.indexOf('@'));
-      var host = hostname + ":" + pid.substring(pid.lastIndexOf(':') + 1);
+      var host = '/agent/' + $routeParams.agent_id + '/';
 
       // Set up polling for the monitor if this is the first update.
       if (!$top.started()) {
@@ -824,14 +816,13 @@
     }
 
     var pid = agent.pid;
-    var hostname = $scope.agents[$routeParams.agent_id].hostname;
     var id = pid.substring(0, pid.indexOf('@'));
     var port = pid.substring(pid.lastIndexOf(':') + 1);
-    var host = hostname + ":" + port;
+    var host = '/agent/' + $routeParams.agent_id + '/';
 
     // Request agent details to get access to the route executor's "directory"
     // to navigate directly to the executor's sandbox.
-    $http.jsonp('/slave/' + $scope.agent_id + '/state?jsonp=JSON_CALLBACK')
+    $http.jsonp(host + id + '/state?jsonp=JSON_CALLBACK')
       .success(function(response) {
 
         function matchFramework(framework) {
@@ -924,16 +915,10 @@
         $scope.agent_id = $routeParams.agent_id;
         $scope.path = $routeParams.path;
 
-        var pid = $scope.agents[$routeParams.agent_id].pid;
-        var hostname = $scope.agents[$routeParams.agent_id].hostname;
-        var id = pid.substring(0, pid.indexOf('@'));
-        var host = hostname + ":" + pid.substring(pid.lastIndexOf(':') + 1);
-        var url = '/slave/' + $scope.agent_id + '/files/browse?jsonp=JSON_CALLBACK';
-
-        $scope.agent_host = host;
+        var url = '/agent/' + $scope.agent_id + '/files/browse?jsonp=JSON_CALLBACK';
 
         $scope.pail = function($event, path) {
-          pailer(host, path, decodeURIComponent(path), $scope.agent_id);
+          pailer('/agent/' + $scope.agent_id + '/', decodeURIComponent(path));
         };
 
         // TODO(bmahler): Try to get the error code / body in the error callback.

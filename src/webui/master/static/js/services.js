@@ -271,7 +271,7 @@
       return;
     }
 
-    this.endpoint = '/slave/' + scope.agent_id + '/monitor/statistics?jsonp=JSON_CALLBACK';
+    this.endpoint = host + '/' + id + '/monitor/statistics?jsonp=JSON_CALLBACK';
     this.scope = scope;
 
     // Initial poll is immediate.

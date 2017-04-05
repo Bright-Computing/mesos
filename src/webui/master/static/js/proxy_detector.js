@@ -1,0 +1,3 @@
+function isBcMesosProxyUsed() {
+  return false;
+}

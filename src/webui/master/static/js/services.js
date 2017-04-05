@@ -271,7 +271,8 @@
       return;
     }
 
-    this.endpoint = host + '/' + id + '/monitor/statistics?jsonp=JSON_CALLBACK';
+    this.endpoint = (isBcMesosProxyUsed() ? '' : '//') + host + '/' + id
+      + '/monitor/statistics?jsonp=JSON_CALLBACK';
     this.scope = scope;
 
     // Initial poll is immediate.

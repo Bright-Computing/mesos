@@ -14,7 +14,8 @@
   // Invokes the pailer for the specified host and path using the
   // specified window_title.
   function pailer(host, path, window_title) {
-    var url = host + 'files/read?path=' + path;
+    var url = (isBcMesosProxyUsed() ? '' : '//') + host + '/files/read?path='
+      + path;
     // The randomized `storageKey` is removed from `localStorage` once the
     // pailer window loads the URL into its `sessionStorage`, therefore
     // the probability of collisions is low and we do not use a uuid.
@@ -411,7 +412,8 @@
       // the leading master automatically. This would cause a CORS error if we
       // use XMLHttpRequest here. To avoid the CORS error, we use JSONP as a
       // workaround. Please refer to MESOS-5911 for further details.
-      $http.jsonp('master/state?jsonp=JSON_CALLBACK')
+      $http.jsonp(isBcMesosProxyUsed() ? 'master/state?jsonp=JSON_CALLBACK' :
+        leadingMasterURL('/master/state?jsonp=JSON_CALLBACK'))
         .success(function(response) {
           if (updateState($scope, $timeout, response)) {
             $scope.delay = updateInterval(_.size($scope.agents));
@@ -426,7 +428,8 @@
     };
 
     var pollMetrics = function() {
-      $http.jsonp('metrics/snapshot?jsonp=JSON_CALLBACK')
+      $http.jsonp(isBcMesosProxyUsed() ? 'metrics/snapshot?jsonp=JSON_CALLBACK' : 
+        leadingMasterURL('/master/state?jsonp=JSON_CALLBACK'))
         .success(function(response) {
           if (updateMetrics($scope, $timeout, response)) {
             $scope.delay = updateInterval(_.size($scope.agents));
@@ -459,7 +462,8 @@
         ).open();
       } else {
         pailer(
-            '/mesos/',
+            (isBcMesosProxyUsed() ? '/mesos/' :
+              ($scope.$location.host() + ':' + $scope.$location.port())),
             '/master/log',
             'Mesos Master');
       }
@@ -498,6 +502,13 @@
         $scope.alert_message = 'No framework found with ID: ' + $routeParams.id;
         $('#alert').show();
       }
+
+      // Fix known frameworks urls if proxy is used
+      if (isBcMesosProxyUsed() && $scope.framework) {
+        if ($scope.framework.name == 'marathon') {
+          $scope.framework.webui_url = '/marathon';
+        }
+      }
     };
 
     if ($scope.state) {
@@ -525,8 +536,10 @@
       }
 
       var pid = $scope.agents[$routeParams.agent_id].pid;
+      var hostname = $scope.agents[$routeParams.agent_id].hostname;
       var id = pid.substring(0, pid.indexOf('@'));
-      var host = '/agent/' + $routeParams.agent_id + '/';
+      var host = isBcMesosProxyUsed() ? ('/agent/' + $routeParams.agent_id)
+        : (hostname + ":" + pid.substring(pid.lastIndexOf(':') + 1));
 
       $scope.log = function($event) {
         if (!$scope.state.external_log_file && !$scope.state.log_dir) {
@@ -545,7 +558,8 @@
         $top.start(host, id, $scope);
       }
 
-      $http.jsonp(host + id + '/state?jsonp=JSON_CALLBACK')
+      $http.jsonp((isBcMesosProxyUsed() ? '' : '//') + host + '/' + id
+        + '/state?jsonp=JSON_CALLBACK')
         .success(function (response) {
           $scope.state = response;
 
@@ -590,7 +604,8 @@
           $('#alert').show();
         });
 
-      $http.jsonp('/slave/' + $scope.agent_id + '/metrics/snapshot?jsonp=JSON_CALLBACK')
+      $http.jsonp((isBcMesosProxyUsed() ? ('/slave/' + $scope.agent_id)
+        : ('//' + host)) + '/metrics/snapshot?jsonp=JSON_CALLBACK')
         .success(function (response) {
           $scope.staging_tasks = response['slave/tasks_staging'];
           $scope.starting_tasks = response['slave/tasks_starting'];
@@ -630,15 +645,18 @@
       }
 
       var pid = $scope.agents[$routeParams.agent_id].pid;
+      var hostname = $scope.agents[$routeParams.agent_id].hostname;
       var id = pid.substring(0, pid.indexOf('@'));
-      var host = '/agent/' + $routeParams.agent_id + '/';
+      var host = isBcMesosProxyUsed() ? ('/agent/' + $routeParams.agent_id)
+        : (hostname + ":" + pid.substring(pid.lastIndexOf(':') + 1));
 
       // Set up polling for the monitor if this is the first update.
       if (!$top.started()) {
         $top.start(host, id, $scope);
       }
 
-      $http.jsonp(host + id + '/state?jsonp=JSON_CALLBACK')
+      $http.jsonp((isBcMesosProxyUsed() ? '' : '//') + host + '/' + id
+        + '/state?jsonp=JSON_CALLBACK')
         .success(function (response) {
           $scope.state = response;
 
@@ -706,15 +724,18 @@
       }
 
       var pid = $scope.agents[$routeParams.agent_id].pid;
+      var hostname = $scope.agents[$routeParams.agent_id].hostname;
       var id = pid.substring(0, pid.indexOf('@'));
-      var host = '/agent/' + $routeParams.agent_id + '/';
+      var host = isBcMesosProxyUsed() ? ('/agent/' + $routeParams.agent_id)
+        : (hostname + ":" + pid.substring(pid.lastIndexOf(':') + 1));
 
       // Set up polling for the monitor if this is the first update.
       if (!$top.started()) {
         $top.start(host, id, $scope);
       }
 
-      $http.jsonp('/slave/' + $scope.agent_id + '/state?jsonp=JSON_CALLBACK')
+      $http.jsonp((isBcMesosProxyUsed() ? ('/slave/' + $scope.agent_id)
+        : ('//' + host + '/' + id)) + '/state?jsonp=JSON_CALLBACK')
         .success(function (response) {
           $scope.state = response;
 
@@ -816,13 +837,16 @@
     }
 
     var pid = agent.pid;
+    var hostname = $scope.agents[$routeParams.agent_id].hostname;
     var id = pid.substring(0, pid.indexOf('@'));
     var port = pid.substring(pid.lastIndexOf(':') + 1);
-    var host = '/agent/' + $routeParams.agent_id + '/';
+    var host = isBcMesosProxyUsed() ? ('/agent/' + $routeParams.agent_id)
+          : (hostname + ":" + port);
 
     // Request agent details to get access to the route executor's "directory"
     // to navigate directly to the executor's sandbox.
-    $http.jsonp(host + id + '/state?jsonp=JSON_CALLBACK')
+    $http.jsonp((isBcMesosProxyUsed() ? '' : '//') + host + '/' + id
+      + '/state?jsonp=JSON_CALLBACK')
       .success(function(response) {
 
         function matchFramework(framework) {
@@ -915,15 +939,28 @@
         $scope.agent_id = $routeParams.agent_id;
         $scope.path = $routeParams.path;
 
-        var url = '/agent/' + $scope.agent_id + '/files/browse?jsonp=JSON_CALLBACK';
+        var pid = $scope.agents[$routeParams.agent_id].pid;
+        var hostname = $scope.agents[$routeParams.agent_id].hostname;
+        var id = pid.substring(0, pid.indexOf('@'));
+        var host = hostname + ":" + pid.substring(pid.lastIndexOf(':') + 1);
+
+        var url = isBcMesosProxyUsed() ? ('/agent/' + $scope.agent_id)
+          : ('//' + host);
+
+        $scope.agent_host = url;
 
         $scope.pail = function($event, path) {
-          pailer('/agent/' + $scope.agent_id + '/', decodeURIComponent(path));
+          if (isBcMesosProxyUsed()) {
+            pailer('/agent/' + $scope.agent_id + '/', decodeURIComponent(path));
+          } else {
+            pailer(host, path, decodeURIComponent(path));
+          }
         };
 
         // TODO(bmahler): Try to get the error code / body in the error callback.
         // This wasn't working with the current version of angular.
-        $http.jsonp(url, {params: {path: $routeParams.path}})
+        $http.jsonp(url + '/files/browse?jsonp=JSON_CALLBACK',
+          {params: {path: $routeParams.path}})
           .success(function(data) {
             $scope.listing = data;
             $('#listing').show();

@@ -1552,7 +1552,8 @@ nobase_dist_pkgdata_DATA +=						\
   webui/master/static/js/app.js						\
   webui/master/static/js/controllers.js					\
   webui/master/static/js/jquery.pailer.js				\
-  webui/master/static/js/services.js
+  webui/master/static/js/services.js \
+  webui/master/static/js/proxy_detector.js
 
 # Need to distribute/install webui CSS.
 nobase_dist_pkgdata_DATA +=						\
@@ -1574,7 +1575,8 @@ nobase_dist_pkgdata_DATA +=						\
   webui/master/static/pailer.html					\
   webui/master/static/directives/pagination.html			\
   webui/master/static/directives/tableHeader.html			\
-  webui/master/static/directives/timestamp.html
+  webui/master/static/directives/timestamp.html \
+  webui/master/static/maintenance.html
 
 # Need to distribute/install webui images.
 nobase_dist_pkgdata_DATA +=						\
@@ -1587,7 +1589,8 @@ nobase_dist_pkgdata_DATA +=						\
   webui/master/static/fonts/glyphicons-halflings-regular.eot		\
   webui/master/static/fonts/glyphicons-halflings-regular.svg		\
   webui/master/static/fonts/glyphicons-halflings-regular.ttf		\
-  webui/master/static/fonts/glyphicons-halflings-regular.woff
+  webui/master/static/fonts/glyphicons-halflings-regular.woff \
+  webui/master/static/fonts/glyphicons-halflings-regular.woff2
 
 # Need to distribute/install third-party javascript.
 nobase_dist_pkgdata_DATA +=						\
